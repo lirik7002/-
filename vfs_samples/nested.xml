@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="nested-vfs">
+  <dir name="home">
+    <dir name="user">
+      <dir name="docs">
+        <file name="readme.txt" encoding="utf-8">SGVsbG8sIFdvcmxkIQ==</file>
+      </dir>
+    </dir>
+  </dir>
+  <dir name="etc">
+    <file name="motd" encoding="utf-8">V2VsY29tZSE=</file>
+  </dir>
+</vfs>
