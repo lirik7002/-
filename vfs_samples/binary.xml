@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="binary-vfs">
+  <dir name="data">
+    <file name="image.bin" encoding="base64">AAECAwQ=</file>
+  </dir>
+</vfs>
