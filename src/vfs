@@ -1,0 +1,59 @@
+"""Модуль виртуальной файловой системы (VFS)."""
+
+from dataclasses import dataclass, field
+from typing import Optional
+
+DEFAULT_PERMISSIONS = "rwxr-xr-x"
+
+
+@dataclass
+class VfsNode:
+    """Узел виртуальной файловой системы (файл или директория)."""
+
+    name: str
+    is_dir: bool
+    content: bytes = b""
+    children: dict[str, "VfsNode"] = field(default_factory=dict)
+    parent: Optional["VfsNode"] = None
+    permissions: str = DEFAULT_PERMISSIONS
+    mtime: float = 0.0
+
+
+class Vfs:
+    """Виртуальная файловая система, существующая только в памяти."""
+
+    def __init__(self, name: str, root: VfsNode):
+        """Инициализирует VFS с заданным именем и корневым узлом."""
+        self.name = name
+        self.root = root
+        self.cwd = root
+
+    def resolve(self, path: str) -> VfsNode:
+        """Находит узел по заданному пути (абсолютному или относительному)."""
+        if not path or path == ".":
+            return self.cwd
+
+        current = self.root if path.startswith("/") else self.cwd
+        parts = [p for p in path.split("/") if p and p != "."]
+
+        for part in parts:
+            if part == "..":
+                if current.parent is not None:
+                    current = current.parent
+            else:
+                if not current.is_dir:
+                    raise NotADirectoryError(f"Не директория: {current.name}")
+                if part not in current.children:
+                    raise FileNotFoundError(f"Путь не найден: {path}")
+                current = current.children[part]
+        return current
+
+
+def create_default_vfs() -> Vfs:
+    """Создает VFS по умолчанию в памяти, если путь не был передан."""
+    root = VfsNode(name="/", is_dir=True)
+    home = VfsNode(name="home", is_dir=True, parent=root)
+    tmp = VfsNode(name="tmp", is_dir=True, parent=root)
+    root.children["home"] = home
+    root.children["tmp"] = tmp
+    return Vfs(name="default-vfs", root=root)
