@@ -1,4 +1,4 @@
-"""Command line interface: argument parsing and validation."""
+"""Интерфейс командной строки: разбор аргументов и валидация."""
 
 import argparse
 import os
@@ -7,89 +7,124 @@ import sys
 from urllib.parse import urlparse
 
 from src.config import Config
-from src.constants import (
-    EXIT_INVALID_ARGS,
-    PNG_SUFFIX,
-)
+from src.constants import EXIT_INVALID_ARGS, PNG_SUFFIX
 
 PACKAGE_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Create the argparse parser with all options of the tool."""
+    """Создать парсер аргументов со всеми опциями инструмента.
+
+    Возвращает:
+        Настроенный argparse.ArgumentParser.
+    """
     parser = argparse.ArgumentParser(
         prog="depviz",
-        description="Visualize pip package dependency graph.",
+        description="Визуализация графа зависимостей пакета pip.",
     )
     parser.add_argument(
         "--package",
         required=True,
-        help="Name of the package to analyse",
+        help="Имя анализируемого пакета",
     )
     parser.add_argument(
         "--repo",
         required=True,
-        help="PyPI URL or path to a test graph file",
+        help="URL PyPI либо путь к файлу тестового графа",
     )
     parser.add_argument(
         "--mode",
         required=True,
         choices=["online", "test"],
-        help="Work mode: online PyPI or local test file",
+        help="Режим: online (PyPI) или test (локальный файл)",
     )
     parser.add_argument(
         "--output",
         required=True,
-        help="Output PNG file name",
+        help="Имя выходного PNG-файла",
     )
     parser.add_argument(
         "--exclude",
         default="",
-        help="Substring; packages containing it are skipped",
+        help="Подстрока; пакеты с ней исключаются",
     )
     return parser
 
 
 def _validate_package(name: str) -> list[str]:
-    """Return error strings for an invalid package name."""
+    """Проверить имя пакета.
+
+    Аргументы:
+        name: имя пакета.
+
+    Возвращает:
+        Список строк с описанием ошибок (пустой, если всё корректно).
+    """
     if not name or not PACKAGE_RE.match(name):
-        return ["package: expected letters, digits, '.', '_', '-'"]
+        return ["package: ожидаются буквы, цифры, '.', '_', '-'"]
     return []
 
 
 def _validate_online_repo(repo: str) -> list[str]:
-    """Validate PyPI-style URL for the online mode."""
+    """Проверить URL репозитория для онлайн-режима.
+
+    Аргументы:
+        repo: строка URL.
+
+    Возвращает:
+        Список ошибок (пустой при корректном URL).
+    """
     parsed = urlparse(repo)
-    valid = (
-        parsed.scheme in ("http", "https") and bool(parsed.netloc)
-    )
+    valid = parsed.scheme in ("http", "https") and bool(parsed.netloc)
     if not valid:
-        return ["repo: online mode expects an http(s) URL"]
+        return ["repo: в онлайн-режиме ожидается http(s)-URL"]
     return []
 
 
 def _validate_repo(repo: str, mode: str) -> list[str]:
-    """Validate the repository argument for the given mode."""
+    """Проверить аргумент репозитория с учётом режима.
+
+    Аргументы:
+        repo: URL или путь к файлу.
+        mode: "online" или "test".
+
+    Возвращает:
+        Список ошибок.
+    """
     if mode == "online":
         return _validate_online_repo(repo)
     if not os.path.isfile(repo):
-        return [f"repo: test file not found: {repo}"]
+        return [f"repo: тестовый файл не найден: {repo}"]
     return []
 
 
 def _validate_output(path: str) -> list[str]:
-    """Validate the output PNG file name and its directory."""
+    """Проверить имя выходного PNG-файла и его директорию.
+
+    Аргументы:
+        path: имя файла.
+
+    Возвращает:
+        Список ошибок.
+    """
     errors: list[str] = []
     if not path.lower().endswith(PNG_SUFFIX):
-        errors.append("output: file name must end with .png")
+        errors.append("output: имя файла должно оканчиваться на .png")
     out_dir = os.path.dirname(os.path.abspath(path))
     if not os.path.isdir(out_dir):
-        errors.append(f"output: directory does not exist: {out_dir}")
+        errors.append(f"output: директория не существует: {out_dir}")
     return errors
 
 
 def validate(args: argparse.Namespace) -> list[str]:
-    """Return a list of human-readable validation errors."""
+    """Полная валидация всех параметров.
+
+    Аргументы:
+        args: разобранные аргументы argparse.
+
+    Возвращает:
+        Список человекочитаемых ошибок.
+    """
     errors: list[str] = []
     errors += _validate_package(args.package)
     errors += _validate_repo(args.repo, args.mode)
@@ -98,13 +133,23 @@ def validate(args: argparse.Namespace) -> list[str]:
 
 
 def parse_args(argv: list[str] | None = None) -> Config:
-    """Parse argv and exit with error code on invalid input."""
+    """Разобрать argv и завершить процесс при ошибке валидации.
+
+    Аргументы:
+        argv: список аргументов; None — взять sys.argv.
+
+    Возвращает:
+        Заполненный объект Config.
+
+    Исключения:
+        SystemExit: с кодом EXIT_INVALID_ARGS при невалидных данных.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
     errors = validate(args)
     if errors:
         for error in errors:
-            print(f"[ERROR] {error}", file=sys.stderr)
+            print(f"[ОШИБКА] {error}", file=sys.stderr)
         sys.exit(EXIT_INVALID_ARGS)
     return Config(
         package=args.package,
@@ -116,7 +161,11 @@ def parse_args(argv: list[str] | None = None) -> Config:
 
 
 def print_config(cfg: Config) -> None:
-    """Print all user settings as key-value pairs (stage 1)."""
+    """Вывести все параметры пользователя в формате ключ-значение.
+
+    Аргументы:
+        cfg: конфигурация для вывода.
+    """
     print(f"package = {cfg.package}")
     print(f"repo    = {cfg.repo}")
     print(f"mode    = {cfg.mode}")
