@@ -1,5 +1,3 @@
-"""Tests for METADATA parsing (no network)."""
-
 from src.fetcher import _parse_requires_dist
 
 SAMPLE = """Name: demo
