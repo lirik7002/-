@@ -119,11 +119,7 @@ def print_params(args):
 
 
 def main(argv=None):
-    """Точка входа приложения.
-
-    :param argv: аргументы командной строки
-    :return: код возврата
-    """
+    """Точка входа приложения."""
     argv = sys.argv[1:] if argv is None else argv
     args = parse_args(argv)
     try:
@@ -134,7 +130,35 @@ def main(argv=None):
     except ValueError as err:
         print(f"Ошибка: {err}", file=sys.stderr)
         return 1
+    
+    # Этап 1: Вывод параметров
     print_params(args)
+    
+    # Этапы 2-5: Построение графа
+    from src.graph import parse_test_repo, bfs_collect, bfs_with_collector
+    from src.collector import collect_direct
+    from src.render import to_d2, render_png
+
+    if args.test_mode:
+        graph = parse_test_repo(args.repo)
+        order, edges = bfs_collect(graph, args.package, args.filter, 10)
+    else:
+        order, edges = bfs_with_collector(
+            args.package, collect_direct, args.filter, 10
+        )
+
+    # Вывод результатов обхода
+    print(f"\nНайдено пакетов: {len(order)}")
+    print(f"Порядок обхода: {' -> '.join(order)}")
+    
+    # Этап 5: Попытка сохранения картинки
+    try:
+        d2_text = to_d2(edges)
+        render_png(d2_text, args.output)
+        print(f"Граф сохранен в {args.output}")
+    except RuntimeError as err:
+        print(f"Ошибка рендера (картинка не сохранена): {err}")
+
     return 0
 
 
